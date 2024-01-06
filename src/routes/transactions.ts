@@ -1,4 +1,4 @@
-import knex from 'knex'
+import { knex } from '../database'
 import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { FastifyInstance } from 'fastify'
@@ -14,7 +14,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
       const { sessionId } = request.cookies
 
       const transactions = await knex('transactions')
-        .where('sessionId', sessionId)
+        .where('session_id', sessionId)
         .select('*')
 
       return {
@@ -39,7 +39,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
 
       const transaction = await knex('transactions')
         .where({
-          sessionId,
+          session_id: sessionId,
           id,
         })
         .first()
@@ -58,14 +58,12 @@ export async function transactionsRoutes(app: FastifyInstance) {
     async (request) => {
       const { sessionId } = request.cookies
 
-      const summary = knex('transactions')
-        .where('sessionId', sessionId)
+      const summary = await knex('transactions')
+        .where('session_id', sessionId)
         .sum('amount', { as: 'amount' })
         .first()
 
-      return {
-        summary,
-      }
+      return { summary }
     },
   )
 
@@ -83,7 +81,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
     if (!sessionId) {
       sessionId = randomUUID()
 
-      reply.cookie('sessionId', sessionId, {
+      reply.cookie('session_id', sessionId, {
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       })
@@ -93,7 +91,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
       id: randomUUID(),
       title,
       amount: type === 'credit' ? amount : amount * -1,
-      sessionId,
+      session_id: sessionId,
     })
 
     // HTTP Code 201: Created
